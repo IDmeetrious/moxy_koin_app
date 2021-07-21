@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MoxyTestApp</string>
+    <string name="example">example</string>
+    <string name="username_login">Username/Login</string>
+</resources>
