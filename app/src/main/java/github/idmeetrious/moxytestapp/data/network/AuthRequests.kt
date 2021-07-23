@@ -1,10 +1,10 @@
 package github.idmeetrious.moxytestapp.data.network
 
 import github.idmeetrious.moxytestapp.data.network.dto.RepositoryDto
+import okhttp3.ResponseBody
 import retrofit2.http.GET
 import retrofit2.http.Headers
 import retrofit2.http.Path
-import retrofit2.http.Streaming
 
 interface AuthRequests {
     @GET("/users/{username}/repos")
@@ -16,5 +16,5 @@ interface AuthRequests {
     @GET("/repos/{fullname}/zipball/")
     suspend fun downloadUserRepositoryZip(
         @Path("fullname") fullName: String
-    ): String
+    ): ResponseBody
 }

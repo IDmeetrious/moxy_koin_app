@@ -6,6 +6,7 @@ import github.idmeetrious.moxytestapp.domain.entities.Repository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import okhttp3.ResponseBody
 
 private const val TAG = "RemoteDataSourceImpl"
 
@@ -19,7 +20,7 @@ class RemoteDataSourceImpl(
                 list.map { dto -> mapper.mapToEntity(dto) }
             }
 
-    override suspend fun downloadRepository(fullName: String): String =
+    override suspend fun downloadRepository(fullName: String): ResponseBody =
         api.downloadUserRepositoryZip(fullName)
 
 //    override suspend fun downloadRepository(fullName: String): Flow<ByteArray> {
