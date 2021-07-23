@@ -1,5 +1,6 @@
 package github.idmeetrious.moxytestapp.presentation.fragments
 
+import android.app.Activity
 import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.graphics.Color
@@ -8,6 +9,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.ProgressBar
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -36,6 +38,7 @@ class RepositoryListFragment : MvpAppCompatFragment(), RepositoryListView {
     private var rv: RecyclerView? = null
     private var pb: ProgressBar? = null
     private var downloadZip: ByteArray? = null
+    private val CREATE_FILE_REQUEST_CODE = 1
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -57,6 +60,7 @@ class RepositoryListFragment : MvpAppCompatFragment(), RepositoryListView {
 
     private fun setSearchClickListener() {
         binding.searchIb.setOnClickListener {
+            hideKeyboard()
             val query = binding.searchEt.text?.toString()?.trim()
             if (!query.isNullOrEmpty()) {
                 binding.searchEtLayout.clearFocus()
@@ -67,6 +71,14 @@ class RepositoryListFragment : MvpAppCompatFragment(), RepositoryListView {
                 binding.searchEtLayout.error = "Incorrect query, check your input"
             }
         }
+    }
+
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+        view?.let {
+            imm.hideSoftInputFromWindow(it.windowToken, 0)
+        }
+
     }
 
     private fun setAdapter() {
@@ -94,9 +106,9 @@ class RepositoryListFragment : MvpAppCompatFragment(), RepositoryListView {
         presenter.downloadRepo(item)
     }
 
-    override fun saveTo(data: ByteArray, name: String) {
-        downloadZip = data
-        saveWithIntent(name)
+    override fun saveFileTo(file: ByteArray, fileName: String) {
+        downloadZip = file
+        saveWithIntent(fileName)
     }
 
     private fun saveWithIntent(name: String) {
@@ -106,12 +118,12 @@ class RepositoryListFragment : MvpAppCompatFragment(), RepositoryListView {
                 type = "application/zip"
                 putExtra(Intent.EXTRA_TITLE, "${name}.zip")
             }
-            startActivityForResult(intent, 1)
+            startActivityForResult(intent, CREATE_FILE_REQUEST_CODE)
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == 1 && resultCode == RESULT_OK) {
+        if (requestCode == CREATE_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
             data?.data?.let { uri ->
                 Log.i(TAG, "--> onActivityResult: $uri")
                 downloadZip?.let {
@@ -119,13 +131,24 @@ class RepositoryListFragment : MvpAppCompatFragment(), RepositoryListView {
                 }
             }
         }
-//        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun loading() {
         Log.i(TAG, "--> loading: ")
         pb?.visibility = View.VISIBLE
         rv?.visibility = View.INVISIBLE
+    }
+
+    override fun progress() {
+        showSnackMessage("Downloading in progress...")
+    }
+
+    override fun complete() {
+        showSnackMessage("Download complete!")
+    }
+
+    override fun failure(msg: String) {
+        showSnackMessage(msg)
     }
 
     override fun success() {
@@ -142,10 +165,10 @@ class RepositoryListFragment : MvpAppCompatFragment(), RepositoryListView {
         Log.i(TAG, "--> error: $msg")
         pb?.visibility = View.GONE
         rv?.visibility = View.GONE
-        showErrorMsg(msg)
+        showSnackMessage(msg)
     }
 
-    private fun showErrorMsg(msg: String) {
+    private fun showSnackMessage(msg: String) {
         view?.let {
             Snackbar
                 .make(it, msg, Snackbar.LENGTH_SHORT)

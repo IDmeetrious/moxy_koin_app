@@ -1,16 +1,14 @@
 package github.idmeetrious.moxytestapp.data.datasource.remote
 
-import android.util.Log
 import github.idmeetrious.moxytestapp.data.mappers.DtoMapper
 import github.idmeetrious.moxytestapp.data.network.AuthRequests
 import github.idmeetrious.moxytestapp.domain.entities.Repository
-import kotlinx.coroutines.flow.*
-import okhttp3.ResponseBody
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 private const val TAG = "RemoteDataSourceImpl"
+
 class RemoteDataSourceImpl(
     private val api: AuthRequests,
     private val mapper: DtoMapper
@@ -21,7 +19,7 @@ class RemoteDataSourceImpl(
                 list.map { dto -> mapper.mapToEntity(dto) }
             }
 
-    override fun downloadRepository(fullName: String): Call<ResponseBody> =
+    override suspend fun downloadRepository(fullName: String): String =
         api.downloadUserRepositoryZip(fullName)
 
 //    override suspend fun downloadRepository(fullName: String): Flow<ByteArray> {

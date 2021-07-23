@@ -1,11 +1,9 @@
 package github.idmeetrious.moxytestapp.presentation.presenters
 
-import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import github.idmeetrious.moxytestapp.data.network.AuthRequests
 import github.idmeetrious.moxytestapp.domain.entities.Repository
@@ -39,16 +37,11 @@ class RepositoryListPresenter : MvpPresenter<RepositoryListView>(), KoinComponen
     private var _repositories: MutableStateFlow<List<Repository>> = MutableStateFlow(emptyList())
     val repositories get() = _repositories
 
-    lateinit var retrofit: Retrofit
-    lateinit var api: AuthRequests
-
-    init {
-        retrofit = Retrofit.Builder()
-            .baseUrl("https://api.github.com")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        api = retrofit.create(AuthRequests::class.java)
-    }
+    var retrofit: Retrofit = Retrofit.Builder()
+        .baseUrl("https://api.github.com")
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+    var api: AuthRequests = retrofit.create(AuthRequests::class.java)
 
     fun getUserRepos(user: String) {
         viewState.loading()
@@ -79,17 +72,9 @@ class RepositoryListPresenter : MvpPresenter<RepositoryListView>(), KoinComponen
         if (isExist) {
             viewState.loading()
             try {
-//                presenterScope.launch(Dispatchers.IO) {
-//                    val response = api.downloadUserRepositoryZip(item.fullName)
-//                        .execute()
-//                    if (response.isSuccessful && response.code() == 200){
-//                        presenterScope.launch(Dispatchers.Main) { viewState.success() }
-//                        Log.i(TAG, "--> downloadRepo: ${response.body()?.contentLength()}bytes")
-//                    }
-//                }
                 presenterScope.launch(Dispatchers.IO) {
-                    val url = "https://github.com/${item.fullName}/archive/master.zip"
-                    val input = URL(url).openStream()
+                    val urlApi = "https://api.github.com/repos/${item.fullName}/zipball/"
+                    val input = URL(urlApi).openStream()
                     var buffer = byteArrayOf()
 //                    saveOnStorage(item.name, input.readBytes())
                     try {
@@ -100,7 +85,7 @@ class RepositoryListPresenter : MvpPresenter<RepositoryListView>(), KoinComponen
                         if (input.available() == 0) {
                             Log.i(TAG, "--> downloadRepo: ${buffer.size}bytes")
                             presenterScope.launch(Dispatchers.Main) {
-                                viewState.saveTo(buffer, item.name)
+                                viewState.saveFileTo(buffer, item.name)
                             }.invokeOnCompletion {
                                 if (it == null) {
                                     presenterScope.launch(Dispatchers.Main) {
@@ -111,33 +96,12 @@ class RepositoryListPresenter : MvpPresenter<RepositoryListView>(), KoinComponen
                             input.close()
                         }
                     }
-
                 }
-
             } catch (e: IOException) {
                 Log.e(TAG, "--> downloadRepo: ${e.message}")
             }
         }
     }
-//    fun downloadRepo(item: Repository) {
-//        Log.i(TAG, "--> downloadRepo: ${item.fullName}")
-//        val isExist = item.fullName.trim().isNotEmpty()
-//        if (isExist) {
-//            viewState.loading()
-//            presenterScope.launch(Dispatchers.IO) {
-//                downloadRepositoryZipUseCase.invoke(item.fullName)
-//                    .catch {
-//                        it.message?.let { msg -> viewState.error(msg) }
-//                    }
-//                    .onCompletion { if (it == null) viewState.success() }
-//                    .flowOn(Dispatchers.Main)
-//                    .collect {
-//                        Log.i(TAG, "--> downloadRepo: ${it.size}bytes")
-////                        saveOnStorage(item.name, it)
-//                    }
-//            }
-//        }
-//    }
 
     private fun saveOnStorage(name: String, data: ByteArray) {
         try {
@@ -178,17 +142,18 @@ class RepositoryListPresenter : MvpPresenter<RepositoryListView>(), KoinComponen
         Log.i(TAG, "--> pendingSaveTo: ${uri.encodedPath}")
         val out = context.contentResolver.openOutputStream(uri)
         out?.let {
+            viewState.progress()
             it.runCatching { write(data) }
                 .onSuccess {
                     presenterScope.launch(Dispatchers.Main) {
-                        viewState.success()
+                        viewState.complete()
                     }
                     out.close()
                 }
                 .onFailure { e ->
                     e.message?.let { msg ->
                         presenterScope.launch(Dispatchers.Main) {
-                            viewState.error(msg)
+                            viewState.failure(msg)
                         }
                     }
                     out.close()

@@ -9,11 +9,16 @@ import moxy.viewstate.strategy.alias.OneExecution
 @AddToEndSingle
 interface RepositoryListView: MvpView {
 
+    // Web requests
     fun loading()
     fun success()
     fun data(list: List<Repository>)
     fun error(msg: String)
 
+    // Downloading
     @OneExecution
-    fun saveTo(data: ByteArray, name: String)
+    fun saveFileTo(file: ByteArray, fileName: String)
+    fun progress()
+    fun complete()
+    fun failure(msg: String)
 }
